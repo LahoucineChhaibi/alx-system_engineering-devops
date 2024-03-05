@@ -1,34 +1,45 @@
 #!/usr/bin/python3
-""" 2-recurse
-
-    Queries the Reddit API and returns a list
-    containing the titles of all hot articles for a given subreddit.
+"""
+Function that queries the Reddit API and prints
+the top ten hot posts of a subreddit
 """
 import requests
+import sys
 
 
-def recurse(subreddit, hot_list=[], after=""):
-    """ Allow us generate a list with the titles
-    """
-    userAgent = {'User-agent': 'bhalut'}
-    if after == "":
-        url = "https://www.reddit.com/r/{}/hot.json?after=".format(subreddit)
-    else:
-        url = "https://www.reddit.com/r/{}/hot.json?after={}".format(
-            subreddit, after)
-    request = requests.get(url, headers=userAgent)
-    data = request.json()
+def add_title(hot_list, hot_posts):
+    """ Adds item into a list """
+    if len(hot_posts) == 0:
+        return
+    hot_list.append(hot_posts[0]['data']['title'])
+    hot_posts.pop(0)
+    add_title(hot_list, hot_posts)
 
-    if request.status_code != 404:
-        children = data['data']['children']
 
-        for i in range(len(children)):
-            hot_list.append(children[i]['data']['title'])
-        after = data['data']['after']
+def recurse(subreddit, hot_list=[], after=None):
+    """ Queries to Reddit API """
+    u_agent = 'Mozilla/5.0'
+    headers = {
+        'User-Agent': u_agent
+    }
 
-        if after is None:
-            return hot_list
+    params = {
+        'after': after
+    }
 
-        recurse(subreddit, hot_list, after)
+    url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
+    res = requests.get(url,
+                       headers=headers,
+                       params=params,
+                       allow_redirects=False)
+
+    if res.status_code != 200:
+        return None
+
+    dic = res.json()
+    hot_posts = dic['data']['children']
+    add_title(hot_list, hot_posts)
+    after = dic['data']['after']
+    if not after:
         return hot_list
-    return None
+    return recurse(subreddit, hot_list=hot_list, after=after)
